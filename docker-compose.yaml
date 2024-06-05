@@ -2,7 +2,7 @@ services:
   postgres:
     image: "postgres:15-alpine"
     environment:
-      POSTGRES_DB: "racing_engine"
+      POSTGRES_DB: "aya_db"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "pass"
     volumes:

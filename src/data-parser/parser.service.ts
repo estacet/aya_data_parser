@@ -1,47 +1,22 @@
 import { OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
-import * as path from "node:path";
+import { DataSource } from 'typeorm';
+import { Rate, Employee, Statement, Donation, Department } from "../db/entities";
+import { AppDataSource } from '../db/data-source';
 
-type Employee = {
-  id: string;
-  name: string;
-  surname: string;
-  department: Department;
-  salaries: Statement[];
-  donations: Donation[];
-};
-
-type Statement = {
-  id: string;
-  amount: number;
-  date: string;
-};
-
-type Department = {
-  id: string;
-  name: string;
-};
-
-type Donation = {
-  id: string;
-  date: string;
-  amount: number;
-};
-
-type Rate = {
-  date: string;
-  sign: string;
-  value: number;
-};
-
-export class ObjParseService implements OnModuleInit {
-  onModuleInit(): any {
-    const dumpText = fs.readFileSync('./init_db/test.txt', 'utf8');
-    this.parse(dumpText);
-  }
-
+export class ParserService implements OnModuleInit {
   parsedRates = [];
   parsedEmployees = [];
+
+  constructor(private dataSource: DataSource) {
+    this.dataSource = AppDataSource;
+  }
+  onModuleInit(): any {
+    const dumpText = fs.readFileSync('./init_db/dump.txt', 'utf8');
+    this.parse(dumpText);
+
+    this.insertValuesIntoDb();
+  }
 
   parse(data: string) {
     const dataArray = data.split('\n');
@@ -177,7 +152,7 @@ export class ObjParseService implements OnModuleInit {
     return employee;
   }
 
-  getEmployeePropertiesInParts = (lines: string[]) => {
+  getEmployeePropertiesInParts(lines: string[]) {
     const parts: string[][] = [];
     let currentPart: string[] = [];
 
@@ -207,47 +182,24 @@ export class ObjParseService implements OnModuleInit {
     return parts;
   };
 
-  createSQLStatements() {
-    `CREATE TABLE "employees" (
-     "id" SERIAL NOT NULL, 
-     "first_name" character varying NOT NULL, 
-     "last_name" character varying NOT NULL, 
-     "department_id" integer, 
-     PRIMARY KEY ("id"))`;
+  insertValuesIntoDb() {
+    this.parsedRates.forEach((parsedRate, index) => {
+      const rate = new Rate(
+        index + 1,
+        new Date(),
+        parsedRate.value,
+        parsedRate.sign.trim(),
+      );
+      this.dataSource.manager.save(rate);
+    });
 
-    `CREATE TABLE "departments" (
-     "id" SERIAL NOT NULL, 
-     "name" character varying NOT NULL, 
-     PRIMARY KEY ("id"))`;
+    this.parsedEmployees.forEach((parsedEmployee) => {
+      const department = new Department(
+        parsedEmployee.department.id,
+        parsedEmployee.department.name,
+      );
 
-    `CREATE TABLE "statements" (
-    "id" SERIAL NOT NULL, 
-    "date" character varying NOT NULL, 
-    "amount" numeric NOT NULL, "employee_id" integer, 
-    PRIMARY KEY ("id"))`;
-
-    `CREATE TABLE "donations" (
-    "id" SERIAL NOT NULL, 
-    "date" character varying NOT NULL, 
-    "amount" numeric NOT NULL, 
-    "currency" character varying NOT NULL, 
-    "amount_in_usd" numeric, "employee_id" integer, 
-    PRIMARY KEY ("id"))`;
-
-
-
-    let sqlStatements = [];
-
-
-
-    //const pathToDumpSQL = path.join(__dirname, './init_db/dump.sql')
-    const pathToDumpSQL = './init_db/dump.sql';
-    fs.writeFile(pathToDumpSQL, sqlStatements.join('\n'), (err) => {
-      if (err) {
-        console.error('Error writing output file:', err);
-        return;
-      }
-      console.log('SQL dump file created successfully.');
+      this.dataSource.manager.save(department);
     });
   }
 }

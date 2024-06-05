@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ObjParseService } from './data-parser/obj-parse.service';
+import { ParserService } from './data-parser/parser.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppDataSource } from './db/data-source';
 
 @Module({
-  imports: [],
+  imports: [
+    TypeOrmModule.forRoot({ ...AppDataSource.options }),
+  ],
   controllers: [],
-  providers: [ObjParseService],
+  providers: [ParserService],
 })
 export class AppModule {}
