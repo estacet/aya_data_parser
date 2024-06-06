@@ -1,14 +1,14 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('rates')
 export class Rate {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: number;
 
   @Column()
-  createdAt: Date;
+  created_at: Date;
 
-  @Column()
+  @PrimaryColumn()
   sign: string;
 
   @Column('decimal')
@@ -16,7 +16,7 @@ export class Rate {
 
   constructor(id: number, createdAt: Date, value: number, sign: string) {
     this.id = id;
-    this.createdAt = createdAt;
+    this.created_at = createdAt;
     this.value = value;
     this.sign = sign;
   }

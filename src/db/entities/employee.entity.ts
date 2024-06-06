@@ -1,21 +1,28 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  PrimaryColumn,
+} from 'typeorm';
 import { Department } from './department.entity';
 import { Statement } from './statement.entity';
 import { Donation } from './donation.entity';
 
 @Entity('employees')
 export class Employee {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: number;
 
   @Column()
-  first_name: string;
+  name: string;
 
   @Column()
-  last_name: string;
+  surname: string;
 
   @ManyToOne(() => Department, (department) => department.employees)
-  @JoinColumn({ name: 'id' })
+  @JoinColumn({ name: 'department_id' })
   department: Department;
 
   @OneToMany(() => Statement, (statement) => statement.employee)
@@ -26,15 +33,15 @@ export class Employee {
 
   constructor(
     id: number,
-    first_name: string,
-    last_name: string,
+    name: string,
+    surname: string,
     department: Department,
     statements: Statement[],
     donations: Donation[],
   ) {
     this.id = id;
-    this.first_name = first_name;
-    this.last_name = last_name;
+    this.name = name;
+    this.surname = surname;
     this.department = department;
     this.statements = statements;
     this.donations = donations;

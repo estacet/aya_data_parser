@@ -1,7 +1,13 @@
 import { OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import { DataSource } from 'typeorm';
-import { Rate, Employee, Statement, Donation, Department } from "../db/entities";
+import {
+  Rate,
+  Employee,
+  Statement,
+  Donation,
+  Department,
+} from '../db/entities';
 import { AppDataSource } from '../db/data-source';
 
 export class ParserService implements OnModuleInit {
@@ -15,7 +21,9 @@ export class ParserService implements OnModuleInit {
     const dumpText = fs.readFileSync('./init_db/dump.txt', 'utf8');
     this.parse(dumpText);
 
-    this.insertValuesIntoDb();
+    this.insertDonations().then(r => {
+      console.log("works!!!");
+    });
   }
 
   parse(data: string) {
@@ -79,25 +87,35 @@ export class ParserService implements OnModuleInit {
       for (const line of part) {
         line.trim();
 
-        const [key, value] = line.trim().split(':');
-        const lowerCaseKey = key.toLowerCase();
-
-        if (key == 'amount') {
-          parseFloat(value);
+        let [key, value] = line.trim().split(':');
+        key = key.toLowerCase();
+        if (value != undefined) {
+          value = value.trim();
         }
 
         switch (property) {
           case 'Employee':
             if (value != undefined) {
-              employee[lowerCaseKey] = value;
+              if (key == 'id') {
+                employee[key] = parseInt(value);
+              }
+              employee[key] = value;
             }
 
             break;
           case 'Donation':
             if (value != undefined) {
-              donation[lowerCaseKey] = value;
+              if (key == 'id') {
+                donation[key] = parseInt(value);
+              } else if (key == 'amount') {
+                const [amount, currency] = value.split(' ');
+                donation[key] = parseFloat(amount);
+                donation.currency = currency;
+              } else {
+                donation[key] = value;
+              }
             }
-            if (Object.entries(donation).length == 3) {
+            if (Object.entries(donation).length == 4) {
               donations.push(donation);
               donation = {};
             }
@@ -105,13 +123,19 @@ export class ParserService implements OnModuleInit {
             break;
           case 'Department':
             if (value != undefined) {
-              department[lowerCaseKey] = value;
+              department[key] = value;
             }
 
             break;
           case 'Salary':
             if (value != undefined) {
-              statement[lowerCaseKey] = value;
+              if (key == 'id') {
+                statement[key] = parseInt(value);
+              } else if (key == 'amount') {
+                statement[key] = parseFloat(value);
+              }
+
+              statement[key] = value;
             }
             if (Object.entries(statement).length == 3) {
               salaries.push(statement);
@@ -121,7 +145,7 @@ export class ParserService implements OnModuleInit {
             break;
           case 'Rate':
             if (value != undefined) {
-              rate[lowerCaseKey] = value;
+              rate[key] = value;
             }
 
             if (Object.entries(rate).length == 3) {
@@ -180,26 +204,132 @@ export class ParserService implements OnModuleInit {
     }
 
     return parts;
-  };
+  }
 
-  insertValuesIntoDb() {
+  insertRates() {
     this.parsedRates.forEach((parsedRate, index) => {
       const rate = new Rate(
         index + 1,
-        new Date(),
+        new Date(parsedRate.date),
         parsedRate.value,
         parsedRate.sign.trim(),
       );
+
       this.dataSource.manager.save(rate);
     });
+  }
 
+  insertDepartments() {
     this.parsedEmployees.forEach((parsedEmployee) => {
       const department = new Department(
         parsedEmployee.department.id,
         parsedEmployee.department.name,
       );
 
-      this.dataSource.manager.save(department);
+      this.dataSource
+        .createQueryBuilder()
+        .insert()
+        .into(Department)
+        .values(department)
+        .orIgnore()
+        .execute();
     });
   }
+
+  insertEmployees() {
+    this.parsedEmployees.forEach((parsedEmployee) => {
+      const employee = new Employee(
+        parseInt(parsedEmployee.id),
+        parsedEmployee.name,
+        parsedEmployee.surname,
+        parsedEmployee.department,
+        parsedEmployee.statements,
+        parsedEmployee.donations,
+      );
+
+      this.dataSource.manager.save(employee);
+
+      // this.dataSource
+      //   .createQueryBuilder()
+      //   .insert()
+      //   .into(Employee)
+      //   .values(employee)
+      //   .orIgnore()
+      //   .execute();
+    });
+  }
+
+  insertStatements() {
+    this.parsedEmployees.forEach((parsedEmployee) => {
+      parsedEmployee.salaries.forEach((parsedStatement) => {
+        const statement = new Statement(
+          parsedStatement.id,
+          new Date(parsedStatement.date),
+          parsedStatement.amount,
+          parsedEmployee,
+        );
+
+        this.dataSource.manager.save(statement);
+      });
+    });
+  }
+
+  async insertDonations() {
+    let date = null;
+    //this.parsedEmployees.forEach((parsedEmployee) => {
+    for (const parsedEmployee of this.parsedEmployees) {
+      if (parsedEmployee.donations != undefined) {
+        for (const parsedDonation of parsedEmployee.donations) {
+          date = new Date(parsedDonation.date);
+
+          const rate = await this.getUSDRateByDate(
+            date,
+            parsedDonation.currency,
+          );
+
+          const amount_in_usd = rate * parsedDonation.amount;
+
+          const donation = new Donation(
+            parsedDonation.id,
+            date,
+            parsedDonation.amount,
+            parsedDonation.currency,
+            amount_in_usd,
+            parsedEmployee,
+          );
+
+          this.dataSource.manager.save(donation);
+        }
+      }
+    }
+      // parsedEmployee.donations !== undefined &&
+      //   parsedEmployee.donations.forEach(async (parsedDonation) => {
+      //     date = new Date(parsedDonation.date);
+      //
+      //     const rate = await this.getUSDRateByDate(date, parsedDonation.sign);
+      //
+      //     const amount_in_usd = rate * parsedDonation.value;
+      //
+      //     const donation = new Donation(
+      //       parsedDonation.id,
+      //       date,
+      //       parsedDonation.amount,
+      //       parsedDonation.currency,
+      //       amount_in_usd,
+      //       parsedEmployee,
+      //     );
+      //
+      //     this.dataSource.manager.save(donation);
+      //   });
+  }
+
+  getUSDRateByDate = async (date: Date, sign: string) => {
+    const query = `SELECT value
+        FROM rates
+      WHERE sign = $1
+      AND created_at = $2`;
+
+    const result = await this.dataSource.query(query, [sign, date]);
+    return result[0] ? result[0].value : null;
+  };
 }

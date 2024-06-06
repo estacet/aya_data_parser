@@ -1,16 +1,13 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Employee } from './employee.entity';
 
 @Entity('donations')
 export class Donation {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: number;
+
+  @Column()
+  created_at: Date;
 
   @Column('decimal')
   amount: number;
@@ -27,12 +24,14 @@ export class Donation {
 
   constructor(
     id: number,
+    createdAt: Date,
     amount: number,
     currency: string,
     amount_in_usd: number,
     employee: Employee,
   ) {
     this.id = id;
+    this.created_at = createdAt;
     this.amount = amount;
     this.currency = currency;
     this.amount_in_usd = amount_in_usd;
