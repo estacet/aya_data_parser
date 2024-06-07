@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { Department, Donation, Employee, Rate, Statement } from './entities';
 
 export const AppDataSource = new DataSource({
+  //TODO: add config for env variables
   type: 'postgres',
   host: 'localhost',
   port: 5433,

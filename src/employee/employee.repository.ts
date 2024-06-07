@@ -13,13 +13,13 @@ export class EmployeeRepository {
           FROM donations
       ),
       employee_to_be_rewarded AS (
-          SELECT id, SUM(amount_in_usd) AS donation
+          SELECT employee_id, SUM(amount_in_usd) AS donation
           FROM donations
-          GROUP BY id
+          GROUP BY employee_id
           HAVING SUM(amount_in_usd) > 100
       )
       SELECT 
-        e.id, 
+        e.employee_id, 
         (e.donation / ds.total) * 10000 AS reward
       FROM employee_to_be_rewarded e, donations_sum ds;
       `;

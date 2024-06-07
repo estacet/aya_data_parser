@@ -100,8 +100,9 @@ export class ParserService implements OnModuleInit {
             if (value != undefined) {
               if (key == 'id') {
                 employee[key] = parseInt(value);
+              } else {
+                employee[key] = value;
               }
-              employee[key] = value;
             }
 
             break;
@@ -135,9 +136,9 @@ export class ParserService implements OnModuleInit {
                 statement[key] = parseInt(value);
               } else if (key == 'amount') {
                 statement[key] = parseFloat(value);
+              } else {
+                statement[key] = value;
               }
-
-              statement[key] = value;
             }
             if (Object.entries(statement).length == 3) {
               salaries.push(statement);
@@ -250,14 +251,6 @@ export class ParserService implements OnModuleInit {
       );
 
       this.dataSource.manager.save(employee);
-
-      // this.dataSource
-      //   .createQueryBuilder()
-      //   .insert()
-      //   .into(Employee)
-      //   .values(employee)
-      //   .orIgnore()
-      //   .execute();
     });
   }
 
