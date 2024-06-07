@@ -21,9 +21,11 @@ export class ParserService implements OnModuleInit {
     const dumpText = fs.readFileSync('./init_db/dump.txt', 'utf8');
     this.parse(dumpText);
 
-    this.insertDonations().then(r => {
-      console.log("works!!!");
-    });
+    this.insertRates();
+    this.insertDepartments();
+    this.insertEmployees();
+    this.insertStatements();
+    this.insertDonations();
   }
 
   parse(data: string) {
@@ -276,7 +278,7 @@ export class ParserService implements OnModuleInit {
 
   async insertDonations() {
     let date = null;
-    //this.parsedEmployees.forEach((parsedEmployee) => {
+
     for (const parsedEmployee of this.parsedEmployees) {
       if (parsedEmployee.donations != undefined) {
         for (const parsedDonation of parsedEmployee.donations) {
@@ -287,14 +289,18 @@ export class ParserService implements OnModuleInit {
             parsedDonation.currency,
           );
 
-          const amount_in_usd = rate * parsedDonation.amount;
+          const amount_in_usd = parseFloat(
+            (rate * parsedDonation.amount).toFixed(2),
+          );
 
           const donation = new Donation(
             parsedDonation.id,
             date,
             parsedDonation.amount,
             parsedDonation.currency,
-            amount_in_usd,
+            parsedDonation.currency == 'USD'
+              ? parsedDonation.amount
+              : amount_in_usd,
             parsedEmployee,
           );
 
@@ -302,25 +308,6 @@ export class ParserService implements OnModuleInit {
         }
       }
     }
-      // parsedEmployee.donations !== undefined &&
-      //   parsedEmployee.donations.forEach(async (parsedDonation) => {
-      //     date = new Date(parsedDonation.date);
-      //
-      //     const rate = await this.getUSDRateByDate(date, parsedDonation.sign);
-      //
-      //     const amount_in_usd = rate * parsedDonation.value;
-      //
-      //     const donation = new Donation(
-      //       parsedDonation.id,
-      //       date,
-      //       parsedDonation.amount,
-      //       parsedDonation.currency,
-      //       amount_in_usd,
-      //       parsedEmployee,
-      //     );
-      //
-      //     this.dataSource.manager.save(donation);
-      //   });
   }
 
   getUSDRateByDate = async (date: Date, sign: string) => {
